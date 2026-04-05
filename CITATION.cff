@@ -1,0 +1,47 @@
+# ============================================================
+# CITATION.cff (How to cite this project)
+# ============================================================
+
+# REQ.UNIVERSAL: Professional open projects SHOULD include CITATION.cff.
+# WHY: Support correct citation and attribution.
+# ALT: Internal or private repositories may omit citation metadata.
+# CUSTOM: Update author, repository, license, and keyword fields as needed.
+# USAGE: See https://citation-file-format.github.io/ for details.
+
+cff-version: "1.2.0"
+type: software
+
+title: "Adaptive Sensor Testing: A Worked Example for Agent-Assisted Test Generation"
+date-released: "2026-04-04"
+
+authors:
+  - family-names: Case
+    given-names: Denise M.
+    orcid: "https://orcid.org/0000-0001-6165-7389"
+    affiliation: "Northwest Missouri State University, USA"
+
+repository-code: "https://github.com/adaptive-interfaces/adaptive-sensor-testing"
+url: "https://github.com/adaptive-interfaces/adaptive-sensor-testing"
+license: MIT
+
+abstract: |
+  A complete worked example demonstrating how to structure agent context
+  for domain-specific engineering work.
+  Includes a simulated PTAT temperature-frequency sensor data package,
+  partial test suite, ATD tool registry, AO team context, and domain context file.
+  Demonstrates agent test generation and anomaly detection
+  using all three adaptive-interfaces priors (ACS, ATD, AO)
+  plus a domain context document.
+
+keywords:
+  - agent engineering
+  - sensor testing
+  - test generation
+  - anomaly detection
+  - worked example
+  - PTAT
+  - domain context
+  - AI-assisted development
+  - skill specification
+
+message: "If using this project, please cite it as described in this file."

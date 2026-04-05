@@ -1,0 +1,59 @@
+# ============================================================
+# .github/workflows/ci.yml (Continuous Integration)
+# ============================================================
+#
+# WHY-FILE: Validate repository hygiene, python, and documentation builds.
+# REQ: CI MUST NOT introduce arbitrary rules that are not reproducible locally.
+# OBS: CI validates only; it should not edit files or deploy docs.
+
+name: CI
+
+# WHY: Validate on PRs and pushes.
+# OBS: This workflow validates only.
+
+on:
+  push:
+    branches: [main] # WHY: Run when pushing to main branch.
+  pull_request:
+    branches: [main] # WHY: Run on pull requests targeting main branch.
+  workflow_dispatch: # WHY: Allow manual triggering from Actions tab.
+
+permissions: # WHY: Use least privileges required.
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: "1" # WHY: Real-time logging.
+  PYTHONIOENCODING: "utf-8" # WHY: Ensure UTF-8 encoding for international characters.
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest # WHY: Linux environment is standard for CI.
+    timeout-minutes: 10 # WHY: Prevent hanging jobs; markdown lint completes well under this.
+
+    steps:
+      # ============================================================
+      # ASSEMBLE: Get code
+      # ============================================================
+
+      - name: A1) Checkout repository code
+        # WHY: Needed to access files for checks.
+        uses: actions/checkout@v6
+
+      # ============================================================
+      # BASIC CHECKS: Markdown
+      # ============================================================
+
+      - name: B1) Lint markdown files
+        # WHY: Enforce consistent formatting in normative schema docs and README.
+        uses: DavidAnson/markdownlint-cli2-action@v23
+        with:
+          globs: "**/*.md"
+
+      - name: B2) Skill check
+        # WHY: Validate that SKILL.md is well-formed and meets criteria for agent use.
+        uses: moonrunnerkc/skillcheck@v0.2.0
+        with:
+          path: SKILL.md
+          min-desc-score: 60
+          skip-dirname-check: true  # WHY: CI clones to temp paths

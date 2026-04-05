@@ -1,0 +1,82 @@
+# ============================================================
+# adaptive-sensor-testing/MANIFEST.toml
+# ============================================================
+
+schema = "adaptive-interfaces-manifest-1"
+schema_url = "https://github.com/adaptive-interfaces/.github/blob/main/schemas/adaptive-interfaces-manifest-1.md"
+
+[meta]
+framework = "Adaptive Interfaces"
+framework_url = "https://github.com/adaptive-interfaces"
+framework_note = "Provides definitions and conventions for adaptive-interfaces manifest semantics."
+description = "Declarative claim of repository intent, scope, and role."
+purpose = "To make explicit the boundaries, responsibilities, and expectations of this repository relative to others."
+
+[repo]
+name = "adaptive-sensor-testing"
+kind = "worked-example"
+description = "Complete worked example: a simulated PTAT sensor data codebase used to demonstrate agent test generation and anomaly detection using all three priors (ACS, ATD, AO) plus domain context."
+
+[layer]
+space = "Agent Engineering"
+role = "worked-example"
+
+[depends]
+required = [
+  "adaptive-conformance-specification",
+  "adaptive-tool-discovery",
+  "adaptive-onboarding",
+  "python>=3.14",
+  "uv",
+]
+optional = [
+  "pytest",
+  "ruff",
+  "pyright",
+]
+
+[provides]
+artifacts = [
+  "SKILL.md",
+  "MANIFEST.toml",
+  "DECISIONS.md",
+  "CITATION.cff",
+  "LICENSE",
+  "README.md",
+  "src/sensor_sim/",
+  "tests/",
+  "data/sample_batch.csv",
+  ".agent/ao-config.toml",
+  ".agent/ao-config-python.toml",
+  ".agent/ao-domain.toml",
+  "tools/sensor-api.toml",
+  "evaluation/rubric.md",
+  "evaluation/scenarios/",
+]
+
+[scope]
+includes = [
+  "synthetic PTAT sensor data generator with injected anomalies",
+  "sensor data processing functions for agent test generation",
+  "partial test suite demonstrating team test conventions",
+  "ao-domain.toml capturing PTAT behavior, expected ranges, anomaly definitions",
+  "ATD registry for the sensor data tool surface",
+  "evaluation scenarios: basic, drift detection, multi-sensor",
+  "rubric for evaluating agent test generation and anomaly reporting",
+]
+excludes = [
+  "production sensor hardware or firmware",
+  "proprietary sensor processing pipelines",
+  "real sensor data",
+  "claims of physical accuracy beyond illustrative simulation",
+  "model training or fine-tuning",
+]
+
+[citation]
+cff = "CITATION.cff"
+preferred = "repo"
+
+[traceability]
+identifier_map = "none"
+
+
