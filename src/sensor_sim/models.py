@@ -2,11 +2,8 @@
 models.py: Shared domain models for synthetic PTAT sensor data.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Literal
-
 
 ScenarioKind = Literal[
     "clean",

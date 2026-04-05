@@ -9,7 +9,7 @@
 
 Worked example: producing team-conforming test artifacts under domain-specific correctness constraints.
 
-IMPORTANT: Better outcomes come less from better prompting alone 
+IMPORTANT: Better outcomes come less from better prompting alone
 than from better specification of priors, skills, constraints, and evaluation.
 
 ## Separation of Concerns
@@ -30,11 +30,12 @@ This repository separates two concerns:
 - ATD: tool capabilities (what can be invoked)
 
 Additional:
+
 - Domain context: defines correctness (in this system)
 
 ## Scenarios
 
-Each scenario evaluates whether the agent can detect anomalies 
+Each scenario evaluates whether the agent can detect anomalies
 that are not captured by existing tests.
 
 1. Basic: clean batch, generate missing tests
@@ -124,6 +125,8 @@ uv run python -m sensor_sim.data_maker
 uv run ruff format .
 uv run ruff check . --fix
 uv run zensical build
+
+npx markdownlint-cli2 "**/*.md" "#.venv" "#site" "#dist" "#node_modules"
 
 git add -A
 git commit -m "update"

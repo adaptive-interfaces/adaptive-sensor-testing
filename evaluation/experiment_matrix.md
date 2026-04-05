@@ -9,55 +9,51 @@ Only the specification stack changes.
 
 ## Condition A: Minimal
 
-### Inputs
+### A.1 Inputs
 
 - basic task prompt only
 - no skill file
 - no domain prior
 - no rubric guidance
 
-### Expected Behavior
+### A.2 Expected Behavior
 
 - writes or completes tests
 - emphasizes pass/fail status
 - weak anomaly reasoning
 - likely misses gradual drift
 
-### Typical Outcome
+### A.3 Typical Outcome
 
 - low traceability
 - low domain awareness
 - weak or absent suspicion reporting
 
----
-
 ## Condition B: Partial
 
-### Inputs
+### B.1 Inputs
 
 - task prompt
 - partial skill definition
 - partial domain context
 - rubric available but not emphasized
 
-### Expected Behavior
+### B.2 Expected Behavior
 
 - generates reasonable tests
 - may identify suspicious trend
 - incomplete use of priors
 - partial anomaly explanation
 
-### Typical Outcome
+### B.3 Typical Outcome
 
 - moderate traceability
 - moderate domain awareness
 - partial detection of drift
 
----
-
 ## Condition C: Complete
 
-### Inputs
+### C.1 Inputs
 
 - task prompt
 - full AST skill
@@ -65,21 +61,19 @@ Only the specification stack changes.
 - domain prior (`ao-domain.toml`)
 - rubric-guided evaluation
 
-### Expected Behavior
+### C.2 Expected Behavior
 
 - generates team-conforming tests
 - evaluates behavior against priors
 - identifies drift explicitly
 - explains why passing tests are insufficient
 
-### Typical Outcome
+### C.3 Typical Outcome
 
 - high traceability
 - strong domain awareness
 - strong anomaly detection
 - strong structured reporting
-
----
 
 ## Comparison Dimensions
 

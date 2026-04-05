@@ -3,12 +3,12 @@ data_maker.py: Generate CSV datasets from TOML configuration.
 
 Usage:
 
-    python -m sensor_sim.data_maker
+    uv run python -m sensor_sim.data_maker
 
 Optional arguments:
 
-    python -m sensor_sim.data_maker --config data/data_sets.toml
-    python -m sensor_sim.data_maker --output-dir data
+    uv run python -m sensor_sim.data_maker --config data/data_sets.toml
+    uv run python -m sensor_sim.data_maker --output-dir data
 
 Config format example:
 
@@ -38,18 +38,15 @@ Config format example:
     num_sensors = 3
 """
 
-from __future__ import annotations
-
 import argparse
 import csv
+import tomllib
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
-import tomllib
 
 from sensor_sim.generator import generate_batch
-from sensor_sim.models import GeneratorConfig, ScenarioKind, SensorReading
-
+from sensor_sim.models import GeneratorConfig, SensorReading
 
 DEFAULT_CONFIG_PATH = Path("data") / "data_sets.toml"
 DEFAULT_OUTPUT_DIR = Path("data")
