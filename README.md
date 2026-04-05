@@ -153,6 +153,17 @@ Then generate tests that conform to local patterns.
 Produce a full conformance record.
 ```
 
+## Developer Maintenance
+
+Format Markdown files with Prettier extension.
+Then run:
+
+```shell
+npx markdownlint-cli2 "**/*.md" "#.venv" "#site" "#dist" "#node_modules"
+
+uvx skillcheck SKILL.md --min-desc-score 75
+```
+
 ## License
 
 MIT © 2026 [Adaptive Interfaces](https://github.com/adaptive-interfaces)

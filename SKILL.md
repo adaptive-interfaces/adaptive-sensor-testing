@@ -1,7 +1,9 @@
+---
 name: adaptive-sensor-testing
 description: >
-Generate and evaluate test artifacts for sensor data systems,
-identifying anomalies beyond standard test results.
+  Generate and evaluate test artifacts for sensor data systems,
+  identifying anomalies beyond standard test results.
+---
 
 # Adaptive Sensor Testing (AST) Skill
 
