@@ -43,8 +43,8 @@ class GeneratorConfig:
 class ProcessorConfig:
     """Configuration for anomaly detection processing."""
 
-    spike_relative_threshold: float = 0.0
-    divergence_relative_threshold: float =  0.0
+    spike_relative_threshold: float = 0.0000002
+    divergence_relative_threshold: float = 0.00000002
     drift_offset_percent: float = 2.0
     baseline_window: int = 100
     comparison_window: int = 100

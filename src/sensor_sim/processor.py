@@ -76,17 +76,23 @@ def detect_spikes(
             continue
 
         local_mean = (prev + nxt) / 2.0
-        delta = abs(current - local_mean)
+        if local_mean == 0:
+            continue
 
-        # treat as spike if large relative jump
-        if local_mean != 0 and delta / abs(local_mean) > config.spike_relative_threshold:
+        delta = abs(current - local_mean)
+        ratio = delta / abs(local_mean)
+
+        if ratio > config.spike_relative_threshold:
             findings.append(
                 AnomalyFinding(
                     sensor_id=readings[i].sensor_id,
                     kind="spike",
                     start_sample=readings[i].sample_index,
                     end_sample=readings[i].sample_index,
-                    message=f"Single-sample spike detected (delta={delta:.2f} Hz).",
+                    message=(
+                        "Single-sample spike detected "
+                        f"(delta={delta:.2f} Hz, ratio={ratio:.6f})."
+                    ),
                     severity="high",
                 )
             )
@@ -96,25 +102,23 @@ def detect_spikes(
 
 def detect_drift(
     readings: list[SensorReading],
-    baseline_window: int = 100,
-    comparison_window: int = 100,
-    drift_offset_percent: float = 2.0,
+    config: ProcessorConfig,
 ) -> list[AnomalyFinding]:
     """Detect sustained deviation from an early baseline."""
     values = _non_null_frequencies(readings)
-    if len(values) < baseline_window + comparison_window:
+    if len(values) < config.baseline_window + config.comparison_window:
         return []
 
-    baseline = mean(values[:baseline_window])
-    threshold = baseline * (drift_offset_percent / 100.0)
+    baseline = mean(values[: config.baseline_window])
+    threshold = baseline * (config.drift_offset_percent / 100.0)
 
     findings: list[AnomalyFinding] = []
 
     for start_index in range(
-        baseline_window,
-        len(values) - comparison_window + 1,
+        config.baseline_window,
+        len(values) - config.comparison_window + 1,
     ):
-        window = values[start_index : start_index + comparison_window]
+        window = values[start_index : start_index + config.comparison_window]
         window_mean = mean(window)
 
         offset = window_mean - baseline
@@ -126,10 +130,10 @@ def detect_drift(
                     sensor_id=readings[0].sensor_id,
                     kind="drift",
                     start_sample=start_index,
-                    end_sample=start_index + comparison_window - 1,
+                    end_sample=start_index + config.comparison_window - 1,
                     message=(
                         "Sustained deviation from calibrated baseline exceeds "
-                        f"{drift_offset_percent:.1f}% "
+                        f"{config.drift_offset_percent:.1f}% "
                         f"(offset={offset:.2f} Hz, {offset_pct:.1f}%)."
                     ),
                     severity="medium",
@@ -139,9 +143,9 @@ def detect_drift(
 
     return findings
 
-
 def detect_divergence(
     grouped: dict[str, list[SensorReading]],
+    config: ProcessorConfig,
 ) -> list[AnomalyFinding]:
     """Detect per-sample divergence between sensors."""
     findings: list[AnomalyFinding] = []
@@ -149,18 +153,17 @@ def detect_divergence(
     if not grouped:
         return findings
 
-    sensors = list(grouped.keys())
-    sample_count = min(len(r) for r in grouped.values())
+    sample_count = min(len(v) for v in grouped.values())
 
     for i in range(sample_count):
-        values = []
-        ids = []
+        values: list[float] = []
+        sensors: list[str] = []
 
-        for sensor_id in sensors:
-            v = grouped[sensor_id][i].frequency_hz
+        for sensor_id, readings in grouped.items():
+            v = readings[i].frequency_hz
             if v is not None:
                 values.append(v)
-                ids.append(sensor_id)
+                sensors.append(sensor_id)
 
         if len(values) < 2:
             continue
@@ -169,69 +172,86 @@ def detect_divergence(
         if avg == 0:
             continue
 
-        for sensor_id, v in zip(ids, values, strict=False):
-            if abs(v - avg) / avg > 0.01:
-                findings.append(
-                    AnomalyFinding(
-                        sensor_id=sensor_id,
-                        kind="divergence",
-                        start_sample=i,
-                        end_sample=i,
-                        message="Sensor diverges from peer group.",
-                        severity="medium",
+        # --- KEY FIX: compute max deviation first ---
+        max_ratio = max(abs(v - avg) / abs(avg) for v in values)
+
+        # --- KEY FIX: gate on group-level divergence ---
+        if max_ratio > config.divergence_relative_threshold:
+            for sensor_id, v in zip(sensors, values, strict=False):
+                if abs(v - avg) / abs(avg) > config.divergence_relative_threshold:
+                    findings.append(
+                        AnomalyFinding(
+                            sensor_id=sensor_id,
+                            kind="divergence",
+                            start_sample=i,
+                            end_sample=i,
+                            message="Sensor diverges from peer group.",
+                            severity="medium",
+                        )
                     )
-                )
 
     return findings
 
 
 def detect_suspicious_trend(
     readings: list[SensorReading],
-    early_window: int = 100,
-    late_window: int = 100,
+    config: ProcessorConfig,
 ) -> list[AnomalyFinding]:
-    """Detect monotonic directional change that may remain in range."""
+    """Detect monotonic directional change that may remain within drift bounds."""
     values = _non_null_frequencies(readings)
-    if len(values) < early_window + late_window:
+    if len(values) < config.early_window + config.late_window:
         return []
 
-    early_mean = mean(values[:early_window])
-    late_mean = mean(values[-late_window:])
+    early_mean = mean(values[: config.early_window])
+    late_mean = mean(values[-config.late_window :])
 
-    if late_mean <= early_mean:
+    if early_mean == 0:
         return []
 
     difference = late_mean - early_mean
-    if difference <= 0.0:
+    ratio = difference / abs(early_mean)
+
+    if ratio <= 0:
+        return []
+
+    # --- KEY FIX: respect drift threshold to avoid double-classifying drift ---
+    drift_threshold_ratio = config.drift_offset_percent / 100.0
+
+    if ratio >= drift_threshold_ratio:
         return []
 
     return [
         AnomalyFinding(
             sensor_id=readings[0].sensor_id,
             kind="suspicious_trend",
-            start_sample=len(values) - late_window,
+            start_sample=len(values) - config.late_window,
             end_sample=len(values) - 1,
             message=(
-                "Late-window mean exceeds early-window mean, indicating "
-                "possible monotonic drift within range."
+                "Late-window mean exceeds early-window mean within drift tolerance "
+                f"(delta={difference:.2f} Hz, ratio={ratio:.6f})."
             ),
             severity="low",
         )
     ]
 
-
-def analyze_batch(readings: list[SensorReading], config: ProcessorConfig) -> BatchResult:
+def analyze_batch(
+    readings: list[SensorReading],
+    config: ProcessorConfig | None = None,
+) -> BatchResult:
     """Run all supported anomaly checks over a batch."""
+    if config is None:
+        config = ProcessorConfig()
+
     grouped = _group_by_sensor(readings)
     findings: list[AnomalyFinding] = []
 
-    findings.extend(detect_divergence(grouped))
+    findings.extend(detect_divergence(grouped, config))
 
     for _sensor_id, sensor_readings in grouped.items():
         findings.extend(detect_dropouts(sensor_readings))
         findings.extend(detect_spikes(sensor_readings, config))
-        findings.extend(detect_drift(sensor_readings))
-        findings.extend(detect_suspicious_trend(sensor_readings))
+        findings.extend(detect_drift(sensor_readings, config))
+        findings.extend(detect_suspicious_trend(sensor_readings, config))
 
     return BatchResult(
         total_readings=len(readings),

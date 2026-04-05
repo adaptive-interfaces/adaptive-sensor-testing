@@ -140,8 +140,7 @@ uv run python -c "from sensor_sim.generator import GeneratorConfig, generate_bat
 uv run python -c "from sensor_sim.generator import GeneratorConfig, generate_batch; r=generate_batch('multi_sensor_divergence', GeneratorConfig(batch_size=800, num_sensors=3, seed=1)); print(r[-20:])"
 
 # run pytest
-uv run pytest
-
+uv run pytest --cov=sensor_sim --cov-report=term-missing --cov-report=xml
 
 uv run ruff format .
 uv run ruff check . --fix
