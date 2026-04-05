@@ -1,0 +1,75 @@
+# Domain configuration: PTAT sensor behavior and anomaly expectations
+
+[domain]
+name = "PTAT temperature-frequency sensor array"
+primary_measurement = "frequency_hz"
+derived_measurement = "temperature_celsius"
+
+[domain.model]
+relationship = "frequency_hz = nominal_frequency_at_25c_hz + sensitivity_hz_per_kelvin * (temperature_celsius - 25)"
+
+[domain.ptat]
+sensitivity_hz_per_kelvin = 512.0    # typical observed value
+linearity_percent = 99.993
+operating_range_celsius = [-30, 70]
+nominal_frequency_at_25c_hz = 100000
+
+[domain.anomalies]
+dropout = "sensor reports null or zero; not a valid reading"
+drift_offset_percent = 2.0
+drift_rate_percent_per_interval = 0.5
+nonlinearity = "deviation from linear fit > 0.1% across range"
+spike = "single-sample deviation > 5 sigma from rolling mean"
+
+[anomaly_semantics]
+# gradual deviation over time
+drift = "sustained directional deviation beyond expected noise"
+# abrupt change
+spike = "sudden discontinuity inconsistent with prior values"
+# cross-sensor inconsistency
+divergence = "one sensor deviates significantly from correlated peers"
+# flatline or stuck sensor
+stuck = "no meaningful variation over time"
+
+[domain.baseline]
+reference_temperature_celsius = 25
+baseline_definition = "first stable segment or calibration point"
+
+[domain.batch]
+expected_batch_size = 1000
+sampling_rate_hz = 10
+calibration_check_interval_samples = 100
+
+[system]
+name = "PTAT sensor system"
+description = "Sensors where output is proportional to absolute temperature"
+
+[expected_relationships]
+# PTAT behavior: value increases approximately linearly with temperature
+ptat_linear = true
+# sensors in a group should show correlated behavior
+multi_sensor_expected_correlation = "high"
+max_inter_sensor_deviation_percent = 2.0
+# small noise is expected
+noise_present = true
+
+[constraints]
+# acceptable variation (relative or absolute tolerance may be refined)
+max_deviation_percent = 5.0
+# drift should not exceed this rate without being flagged
+max_drift_rate = 0.5
+
+[suspicious_patterns]
+# patterns that may pass basic tests but indicate issues
+passing_but_suspicious = [
+  "consistent bias within tolerance but trending",
+  "slow monotonic drift",
+  "sensor deviates while remaining within absolute bounds",
+  "increasing variance over time",
+]
+
+[reporting]
+# agent must explicitly call out suspicious cases
+require_suspicion_reporting = true
+# explanations must reference domain expectations
+require_domain_reference = true

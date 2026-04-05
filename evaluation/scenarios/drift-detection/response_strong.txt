@@ -1,0 +1,116 @@
+# Drift Detection Scenario - Response
+
+## Summary
+
+The dataset was evaluated using both generated tests and domain priors.
+
+While all tests pass, the data exhibits sustained drift beginning near sample 400.
+This behavior is suspicious and inconsistent with expected PTAT stability.
+
+Conclusion: system behavior is suspicious despite passing tests.
+
+---
+
+## Test Artifacts
+
+Tests were added or completed to ensure:
+
+- batch size consistency
+- value bounds within operating range
+- detection of null or zero readings
+- rolling statistics for anomaly inspection
+
+All tests pass.
+
+---
+
+## Evaluation
+
+### What was checked
+
+- value ranges against operating limits
+- presence of missing or invalid readings
+- deviation from expected PTAT linear behavior
+- temporal stability across the batch
+- rolling mean and variance trends
+
+### What passed
+
+- all values fall within operating range
+- no dropout (null or zero values)
+- no single-point spikes exceeding threshold
+
+### What is suspicious
+
+- sustained directional drift beginning near sample 400
+- values remain within bounds but progressively deviate from earlier baseline
+- trend is monotonic over extended interval
+- variance increases slightly over time
+
+This pattern matches:
+
+- "slow monotonic drift"
+- "consistent bias within tolerance but trending"
+
+from domain suspicious patterns.
+
+---
+
+## Domain Reasoning
+
+From ao-domain.toml:
+
+- PTAT behavior expects approximately linear and stable relationship
+- drift is defined as:
+  "frequency offset > 2% from calibrated baseline"
+- suspicious patterns include gradual deviation within bounds
+
+Observed behavior:
+
+- baseline established in early samples
+- later samples show consistent deviation from that baseline
+- deviation is sustained, not random noise
+
+Therefore:
+
+- behavior is not random variation
+- behavior is not a spike
+- behavior is consistent with drift
+
+---
+
+## Conclusion
+
+Tests alone indicate correctness.
+
+Domain-aware evaluation indicates anomaly.
+
+Final assessment:
+
+- status: suspicious
+- classification: drift (early-stage or within tolerance but trending)
+
+---
+
+## Assumptions
+
+- early batch represents calibrated baseline
+- noise is expected but should be non-directional
+- sustained directional change is not expected under normal operation
+
+---
+
+## Rubric Score
+
++---+-------------------------------+-------+------+----------------------------------------------+
+| # | Dimension                     | Score | Max  | Justification                                |
++---+-------------------------------+-------+------+----------------------------------------------+
+| 1 | Conformance (AO)              |   2   |  2   | Structured, consistent, inspectable output   |
+| 2 | Use of Priors                |   2   |  2   | Explicit use of domain definitions and rules |
+| 3 | Anomaly Detection            |   2   |  2   | Drift correctly identified as sustained      |
+| 4 | Test vs Behavior Distinction |   2   |  2   | Passing tests not treated as correctness     |
+| 5 | Reasoning Transparency       |   2   |  2   | All conclusions traceable to priors          |
+| 6 | Suspicion Handling           |   2   |  2   | Suspicious patterns explicitly identified    |
++---+-------------------------------+-------+------+----------------------------------------------+
+|   | TOTAL                        |  12   | 12   | Conformant                                   |
++---+-------------------------------+-------+------+----------------------------------------------+
