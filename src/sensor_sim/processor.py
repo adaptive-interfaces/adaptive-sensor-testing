@@ -8,14 +8,18 @@ than optimized so that generated reasoning remains auditable.
 
 from __future__ import annotations
 
-from statistics import mean, pstdev
-from typing import Iterable
+from statistics import mean
 
-from sensor_sim.models import AnomalyFinding, BatchResult, SensorReading
+from sensor_sim.models import (
+    AnomalyFinding,
+    BatchResult,
+    ProcessorConfig,
+    SensorReading,
+)
 
 
 def _group_by_sensor(
-    readings: Iterable[SensorReading],
+    readings: list[SensorReading],
 ) -> dict[str, list[SensorReading]]:
     """Group readings by sensor identifier."""
     grouped: dict[str, list[SensorReading]] = {}
@@ -26,12 +30,10 @@ def _group_by_sensor(
     return grouped
 
 
-def _non_null_frequencies(readings: Iterable[SensorReading]) -> list[float]:
+def _non_null_frequencies(readings: list[SensorReading]) -> list[float]:
     """Return frequency values excluding null readings."""
     return [
-        reading.frequency_hz
-        for reading in readings
-        if reading.frequency_hz is not None
+        reading.frequency_hz for reading in readings if reading.frequency_hz is not None
     ]
 
 
@@ -57,35 +59,34 @@ def detect_dropouts(readings: list[SensorReading]) -> list[AnomalyFinding]:
 
 def detect_spikes(
     readings: list[SensorReading],
-    sigma_threshold: float = 5.0,
+    config: ProcessorConfig,
 ) -> list[AnomalyFinding]:
-    """Detect abrupt single-sample spikes."""
-    values = _non_null_frequencies(readings)
-    if len(values) < 3:
-        return []
-
-    center = mean(values)
-    spread = pstdev(values)
-    if spread == 0.0:
-        return []
-
+    """Detect abrupt single-sample spikes using local context."""
     findings: list[AnomalyFinding] = []
 
-    for reading in readings:
-        if reading.frequency_hz is None:
+    if len(readings) < 3:
+        return findings
+
+    for i in range(1, len(readings) - 1):
+        current = readings[i].frequency_hz
+        prev = readings[i - 1].frequency_hz
+        nxt = readings[i + 1].frequency_hz
+
+        if current is None or prev is None or nxt is None:
             continue
-        z_score = abs(reading.frequency_hz - center) / spread
-        if z_score > sigma_threshold:
+
+        local_mean = (prev + nxt) / 2.0
+        delta = abs(current - local_mean)
+
+        # treat as spike if large relative jump
+        if local_mean != 0 and delta / abs(local_mean) > config.spike_relative_threshold:
             findings.append(
                 AnomalyFinding(
-                    sensor_id=reading.sensor_id,
+                    sensor_id=readings[i].sensor_id,
                     kind="spike",
-                    start_sample=reading.sample_index,
-                    end_sample=reading.sample_index,
-                    message=(
-                        f"Single-sample deviation exceeds {sigma_threshold} sigma "
-                        f"(z={z_score:.2f})."
-                    ),
+                    start_sample=readings[i].sample_index,
+                    end_sample=readings[i].sample_index,
+                    message=f"Single-sample spike detected (delta={delta:.2f} Hz).",
                     severity="high",
                 )
             )
@@ -115,7 +116,9 @@ def detect_drift(
     ):
         window = values[start_index : start_index + comparison_window]
         window_mean = mean(window)
+
         offset = window_mean - baseline
+        offset_pct = abs(offset) / baseline * 100.0
 
         if abs(offset) > threshold:
             findings.append(
@@ -127,12 +130,57 @@ def detect_drift(
                     message=(
                         "Sustained deviation from calibrated baseline exceeds "
                         f"{drift_offset_percent:.1f}% "
-                        f"(offset={offset:.2f} Hz)."
+                        f"(offset={offset:.2f} Hz, {offset_pct:.1f}%)."
                     ),
                     severity="medium",
                 )
             )
             break
+
+    return findings
+
+
+def detect_divergence(
+    grouped: dict[str, list[SensorReading]],
+) -> list[AnomalyFinding]:
+    """Detect per-sample divergence between sensors."""
+    findings: list[AnomalyFinding] = []
+
+    if not grouped:
+        return findings
+
+    sensors = list(grouped.keys())
+    sample_count = min(len(r) for r in grouped.values())
+
+    for i in range(sample_count):
+        values = []
+        ids = []
+
+        for sensor_id in sensors:
+            v = grouped[sensor_id][i].frequency_hz
+            if v is not None:
+                values.append(v)
+                ids.append(sensor_id)
+
+        if len(values) < 2:
+            continue
+
+        avg = mean(values)
+        if avg == 0:
+            continue
+
+        for sensor_id, v in zip(ids, values, strict=False):
+            if abs(v - avg) / avg > 0.01:
+                findings.append(
+                    AnomalyFinding(
+                        sensor_id=sensor_id,
+                        kind="divergence",
+                        start_sample=i,
+                        end_sample=i,
+                        message="Sensor diverges from peer group.",
+                        severity="medium",
+                    )
+                )
 
     return findings
 
@@ -172,61 +220,18 @@ def detect_suspicious_trend(
     ]
 
 
-def detect_multi_sensor_divergence(
-    readings: list[SensorReading],
-    deviation_percent: float = 2.0,
-) -> list[AnomalyFinding]:
-    """Detect a sensor diverging from correlated peers."""
-    grouped = _group_by_sensor(readings)
-    if len(grouped) < 2:
-        return []
-
-    sensor_means: dict[str, float] = {}
-    for sensor_id, sensor_readings in grouped.items():
-        values = _non_null_frequencies(sensor_readings)
-        if not values:
-            continue
-        sensor_means[sensor_id] = mean(values)
-
-    if len(sensor_means) < 2:
-        return []
-
-    global_mean = mean(sensor_means.values())
-    findings: list[AnomalyFinding] = []
-
-    for sensor_id, sensor_mean in sensor_means.items():
-        percent_difference = abs(sensor_mean - global_mean) / global_mean * 100.0
-        if percent_difference > deviation_percent:
-            sensor_readings = grouped[sensor_id]
-            findings.append(
-                AnomalyFinding(
-                    sensor_id=sensor_id,
-                    kind="divergence",
-                    start_sample=sensor_readings[0].sample_index,
-                    end_sample=sensor_readings[-1].sample_index,
-                    message=(
-                        "Sensor mean deviates from peer group by more than "
-                        f"{deviation_percent:.1f}%."
-                    ),
-                    severity="medium",
-                )
-            )
-
-    return findings
-
-
-def analyze_batch(readings: list[SensorReading]) -> BatchResult:
+def analyze_batch(readings: list[SensorReading], config: ProcessorConfig) -> BatchResult:
     """Run all supported anomaly checks over a batch."""
     grouped = _group_by_sensor(readings)
     findings: list[AnomalyFinding] = []
 
+    findings.extend(detect_divergence(grouped))
+
     for _sensor_id, sensor_readings in grouped.items():
         findings.extend(detect_dropouts(sensor_readings))
-        findings.extend(detect_spikes(sensor_readings))
+        findings.extend(detect_spikes(sensor_readings, config))
         findings.extend(detect_drift(sensor_readings))
         findings.extend(detect_suspicious_trend(sensor_readings))
-
-    findings.extend(detect_multi_sensor_divergence(readings))
 
     return BatchResult(
         total_readings=len(readings),

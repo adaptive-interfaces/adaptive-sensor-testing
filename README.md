@@ -120,7 +120,28 @@ uvx pre-commit run --all-files
 git add -A
 uvx pre-commit run --all-files
 
+# generate data
 uv run python -m sensor_sim.data_maker
+
+# confirm
+uv run python -c "from pathlib import Path; [print(p, p.exists(), p.stat().st_size) for p in Path('data').glob('*.csv')]"
+
+uv run python -c "import pandas as pd; print(pd.read_csv('data/sample_batch.csv').head()); print(pd.read_csv('data/sample_batch.csv').columns.tolist())"
+
+# see what the analyzer is returning
+uv run python -c "from sensor_sim.generator import GeneratorConfig, generate_batch; from sensor_sim.processor import analyze_batch; r=generate_batch('spike', GeneratorConfig(batch_size=800, num_sensors=1, seed=1)); a=analyze_batch(r); print(a.findings)"
+
+uv run python -c "from sensor_sim.generator import GeneratorConfig, generate_batch; from sensor_sim.processor import analyze_batch; r=generate_batch('multi_sensor_divergence', GeneratorConfig(batch_size=800, num_sensors=3, seed=1)); a=analyze_batch(r); print(a.findings)"
+
+# inspect spikes
+uv run python -c "from sensor_sim.generator import GeneratorConfig, generate_batch; from sensor_sim.processor import analyze_batch; r=generate_batch('spike', GeneratorConfig(batch_size=800, num_sensors=1, seed=1)); a=analyze_batch(r); print(a.findings)"
+
+# inspect divergence
+uv run python -c "from sensor_sim.generator import GeneratorConfig, generate_batch; r=generate_batch('multi_sensor_divergence', GeneratorConfig(batch_size=800, num_sensors=3, seed=1)); print(r[-20:])"
+
+# run pytest
+uv run pytest
+
 
 uv run ruff format .
 uv run ruff check . --fix

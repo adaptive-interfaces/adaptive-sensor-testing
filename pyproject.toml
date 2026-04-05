@@ -12,6 +12,7 @@ version = "0.1.0"
 
 dependencies = [
     "httpx", # WHY: HTTP client for making API requests.
+    "pandas", # WHY: Data manipulation and analysis library.
     "rich", # WHY: Rich library for enhanced console output and logging.
 ]
 
@@ -22,6 +23,7 @@ dev = [
     "packaging",
     "pre-commit",
     "pyright",
+    "pytest",
     "ruff",
     "validate-pyproject",
 ]

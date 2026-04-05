@@ -8,6 +8,10 @@ nominal_frequency_at_25c_hz = 100000.0
 sensitivity_hz_per_kelvin = 512.0
 noise_stddev_hz = 8.0
 seed = 42
+spike_magnitude_hz = 250.0
+divergence_offset_hz = 250.0
+dropout_fraction = 0.05
+drift_extra_slope_hz_per_sample = 3.0
 
 [[datasets]]
 name = "sample_batch"
@@ -29,3 +33,12 @@ scenario = "spike"
 name = "multi_sensor_batch"
 scenario = "multi_sensor_divergence"
 num_sensors = 3
+
+[processor]
+spike_relative_threshold = 0.0000002
+divergence_relative_threshold = 0.00000002
+drift_offset_percent = 2.0
+baseline_window = 100
+comparison_window = 100
+early_window = 100
+late_window = 100

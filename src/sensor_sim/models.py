@@ -40,6 +40,19 @@ class GeneratorConfig:
 
 
 @dataclass(frozen=True)
+class ProcessorConfig:
+    """Configuration for anomaly detection processing."""
+
+    spike_relative_threshold: float = 0.0
+    divergence_relative_threshold: float =  0.0
+    drift_offset_percent: float = 2.0
+    baseline_window: int = 100
+    comparison_window: int = 100
+    early_window: int = 100
+    late_window: int = 100
+
+
+@dataclass(frozen=True)
 class AnomalyFinding:
     """A single anomaly or suspicious finding."""
 
